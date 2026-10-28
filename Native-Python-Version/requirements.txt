@@ -1,0 +1,7 @@
+pypdf
+chromadb
+sentence-transformers
+google-genai
+pandas
+gradio
+python-dotenv
