@@ -3,5 +3,5 @@ chromadb
 sentence-transformers
 google-genai
 pandas
-gradio
+streamlit
 python-dotenv

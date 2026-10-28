@@ -1,92 +1,134 @@
+import os
+import tempfile
 import traceback
-import gradio as gr
+import streamlit as st
 from src.data_loader import load_or_create_medical_df
 from src.indexer import index_medical_data
 from src.rag_engine import query_medical_rag
 
-# Initialize dataset and index into ChromaDB on startup
-df_med = load_or_create_medical_df()
-print(index_medical_data())
+# 1. Page Configuration
+st.set_page_config(
+    page_title="MedAssist AI — Native Python RAG",
+    page_icon="🏥",
+    layout="wide"
+)
 
-specialties_list = ["All Specialties"] + sorted(df_med["category"].unique().tolist()) + ["Uploaded Medical PDF"]
+# 2. Cache Initial Data Load & ChromaDB Indexing (Runs ONLY ONCE on startup!)
+@st.cache_resource
+def initialize_knowledge_base():
+    df = load_or_create_medical_df()
+    status = index_medical_data()
+    return df, status
 
-def handle_med_chat(user_message, specialty, chat_history):
-    if chat_history is None:
-        chat_history = []
-    if not user_message or not user_message.strip():
-        return "", chat_history, "⚠️ Please enter a medical question."
+df_med, init_status = initialize_knowledge_base()
+specialties_list = (
+    ["All Specialties"]
+    + sorted(df_med["category"].unique().tolist())
+    + ["Uploaded Medical PDF"]
+)
 
-    try:
-        reply, sources = query_medical_rag(user_message, category_filter=specialty)
-    except Exception as e:
-        reply = f"❌ **Backend Error:** `{str(e)}`"
-        sources = traceback.format_exc()
+# 3. Sidebar: Specialty Filter & PDF Uploader
+with st.sidebar:
+    st.title("🩺 Clinical Controls")
+    st.caption("Architecture: **Native Python + ChromaDB**")
+    st.success(init_status)
 
-    chat_history.append({"role": "user", "content": user_message})
-    chat_history.append({"role": "assistant", "content": reply})
-    return "", chat_history, sources
-
-def handle_pdf_upload(files):
-    if not files:
-        return "⚠️ Please select a PDF file first."
-    paths = [f.name if hasattr(f, "name") else f for f in files]
-    return index_medical_data(extra_files=paths)
-
-with gr.Blocks() as med_demo:
-    gr.Markdown("# 🏥 MedAssist AI — Clinical FAQ & Guideline RAG Assistant")
-    gr.Markdown(
-        "Powered by **Core NIH / WHO Clinical FAQs**, **ChromaDB Metadata Filtering**, and **Gemini 2.5 Flash** with strict non-hallucination guardrails."
+    selected_specialty = st.selectbox(
+        "Filter by Medical Specialty:",
+        options=specialties_list,
+        index=0
     )
 
-    with gr.Row():
-        with gr.Column(scale=3):
-            specialty_dropdown = gr.Dropdown(
-                choices=specialties_list,
-                value="All Specialties",
-                label="🩺 Filter by Medical Specialty (ChromaDB Metadata Filter)"
-            )
-            chatbot = gr.Chatbot(height=430, label="MedAssist Clinical Bot")
-            msg_box = gr.Textbox(
-                placeholder="e.g., Can I give Ibuprofen to a patient with high fever and suspected Dengue?",
-                label="Ask a Medical / Clinical Question"
-            )
-            with gr.Row():
-                submit_btn = gr.Button("Ask MedAssist", variant="primary")
-                clear_btn = gr.Button("Clear Consultation")
+    st.divider()
+    st.subheader("📄 Upload Medical PDFs")
+    uploaded_files = st.file_uploader(
+        "Upload WHO Guides / Lab Manuals (.pdf)",
+        type=["pdf"],
+        accept_multiple_files=True
+    )
 
-            gr.Examples(
-                examples=[
-                    ["Can I take Ibuprofen or Aspirin for Dengue fever pain, and what are the warning signs?"],
-                    ["My fasting blood sugar is 118 mg/dL and HbA1c is 6.1%. Do I have diabetes?"],
-                    ["A diabetic patient's sugar dropped to 58 mg/dL and they are dizzy. What is the 15-15 rule?"],
-                    ["What is the difference between a rescue inhaler and a controller inhaler for asthma?"],
-                    ["Can you prescribe an antibiotic dosage for a severe migraine headache?"]
-                ],
-                inputs=msg_box,
-                label="🧪 Click Any Clinical Test Case Below:"
-            )
+    if st.button("➕ Index PDFs into ChromaDB", use_container_width=True):
+        if not uploaded_files:
+            st.warning("⚠️ Please select at least one PDF file first.")
+        else:
+            with st.spinner("Extracting pages, chunking & embedding into ChromaDB..."):
+                temp_paths = []
+                temp_dir = tempfile.mkdtemp()
+                for uf in uploaded_files:
+                    file_path = os.path.join(temp_dir, uf.name)
+                    with open(file_path, "wb") as f:
+                        f.write(uf.getbuffer())
+                    temp_paths.append(file_path)
 
-        with gr.Column(scale=2):
-            gr.Markdown("### 🔬 Retrieved Clinical Evidence (ChromaDB)")
-            source_inspector = gr.Textbox(
-                label="Matched Guidelines, Source Agency & Cosine Distance",
-                lines=14,
-                interactive=False
-            )
-            gr.Markdown("### 📄 Add Custom Medical PDFs (WHO Guides / Lab Manuals)")
-            pdf_uploader = gr.File(label="Upload Medical PDF", file_count="multiple", file_types=[".pdf"])
-            upload_btn = gr.Button("➕ Index Medical PDF into ChromaDB")
-            upload_status = gr.Textbox(
-                label="Database Status",
-                value="✅ 8 Core NIH/WHO Clinical Guidelines Active",
-                interactive=False
-            )
+                upload_status = index_medical_data(extra_files=temp_paths)
+                st.success(upload_status)
 
-    msg_box.submit(handle_med_chat, [msg_box, specialty_dropdown, chatbot], [msg_box, chatbot, source_inspector])
-    submit_btn.click(handle_med_chat, [msg_box, specialty_dropdown, chatbot], [msg_box, chatbot, source_inspector])
-    clear_btn.click(lambda: ("", [], ""), None, [msg_box, chatbot, source_inspector])
-    upload_btn.click(handle_pdf_upload, inputs=[pdf_uploader], outputs=[upload_status])
+    st.divider()
+    if st.button("🗑️ Clear Consultation History", use_container_width=True):
+        st.session_state.messages = []
+        st.rerun()
 
-if __name__ == "__main__":
-    # In VS Code locally, share=False opens cleanly on http://127.0.0.1:7860
-    med_demo.launch(theme=gr.themes.Soft())
+# 4. Main Header & Quick Clinical Test Cases
+st.title("🏥 MedAssist AI — Clinical FAQ & Guideline Assistant (Native Python)")
+st.caption(
+    "Built from scratch using **Pure Python Chunking**, **SentenceTransformers (`all-MiniLM-L6-v2`)**, "
+    "**ChromaDB Metadata Filtering**, and **Gemini 2.5 Flash**."
+)
+
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+st.markdown("**🧪 Quick Clinical Test Cases (Click to Run):**")
+col1, col2, col3 = st.columns(3)
+sample_query = None
+
+with col1:
+    if st.button("🦟 Dengue Painkillers & Warnings", use_container_width=True):
+        sample_query = "Can I take Ibuprofen or Aspirin for Dengue fever pain, and what are the warning signs?"
+with col2:
+    if st.button("🩸 Diabetes HbA1c Thresholds", use_container_width=True):
+        sample_query = "My fasting blood sugar is 118 mg/dL and HbA1c is 6.1%. Do I have diabetes?"
+with col3:
+    if st.button("🛑 Guardrail Test (Migraine)", use_container_width=True):
+        sample_query = "Can you prescribe an antibiotic dosage for a severe migraine headache?"
+
+st.divider()
+
+# 5. Render Existing Chat History
+for msg in st.session_state.messages:
+    with st.chat_message(msg["role"]):
+        st.markdown(msg["content"])
+        if msg.get("sources"):
+            with st.expander("🔬 View Retrieved Clinical Evidence (ChromaDB & Cosine Distance)"):
+                st.code(msg["sources"], language="text")
+
+# 6. Handle New Question
+chat_input = st.chat_input("Ask a clinical question (e.g., What is the difference between a rescue and controller inhaler?)...")
+user_query = sample_query or chat_input
+
+if user_query:
+    st.session_state.messages.append({"role": "user", "content": user_query})
+    with st.chat_message("user"):
+        st.markdown(user_query)
+
+    with st.chat_message("assistant"):
+        with st.spinner("Searching ChromaDB vectors & verifying clinical guidelines..."):
+            try:
+                reply, sources = query_medical_rag(
+                    user_question=user_query,
+                    category_filter=selected_specialty
+                )
+            except Exception as e:
+                reply = f"❌ **Backend Error:** `{str(e)}`"
+                sources = traceback.format_exc()
+
+        st.markdown(reply)
+        if sources:
+            with st.expander("🔬 View Retrieved Clinical Evidence (ChromaDB & Cosine Distance)"):
+                st.code(sources, language="text")
+
+    st.session_state.messages.append({
+        "role": "assistant",
+        "content": reply,
+        "sources": sources
+    })
