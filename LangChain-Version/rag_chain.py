@@ -9,9 +9,10 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
 from langchain_google_genai import ChatGoogleGenerativeAI
 
+# Load GEMINI_API_KEY from .env
 load_dotenv()
 
-# 1. Core NIH/WHO Clinical FAQs converted directly into LangChain 'Document' objects
+# 1. Core NIH/WHO Clinical FAQs converted into LangChain 'Document' objects
 CLINICAL_DOCS = [
     Document(
         page_content="CONDITION: Dengue Fever | Q: Warning signs & painkillers to avoid? | A: High fever (40°C/104°F), headache, eye pain. WARNING SIGNS: severe abdominal pain, persistent vomiting, bleeding gums/nose, blood in vomit/stool. MEDICATION RULE: Take ONLY Paracetamol. Strictly AVOID Aspirin, Ibuprofen, Naproxen (NSAIDs) due to fatal internal bleeding risk.",
@@ -47,31 +48,46 @@ CLINICAL_DOCS = [
     )
 ]
 
-# 2. Initialize LangChain Embeddings, VectorStore & LLM
-embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+# 2. Initialize Multilingual Embeddings, VectorStore & LLM
+embeddings = HuggingFaceEmbeddings(
+    model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+)
+
 vectorstore = Chroma.from_documents(
     documents=CLINICAL_DOCS,
     embedding=embeddings,
-    collection_name="med_langchain_kb",
+    collection_name="med_multilingual_kb",
     collection_metadata={"hnsw:space": "cosine"}
 )
 
 llm = ChatGoogleGenerativeAI(model="gemini-3.5-flash", temperature=0.0)
 
-# 3. LangChain Prompt Template & LCEL Chain (prompt | llm | StrOutputParser)
+# 3. LangChain Prompt Templates & LCEL Chains
 prompt = ChatPromptTemplate.from_messages([
     ("system", """You are MedAssist AI. Answer STRICTLY using the [CLINICAL CONTEXT] below.
-1. Cite the Record ID & Source (e.g., [MED-001 | WHO / NIH Guidelines]).
-2. Highlight emergency symptoms in bold as **🚨 Emergency Warning Signs**.
-3. If the answer is not in the context, say: "I do not have verified clinical guidelines for this question. Please consult a physician."
-4. End with: *Disclaimer: For educational purposes only; not a substitute for professional medical advice.*"""),
+1. LANGUAGE MATCHING: If the user asks in Roman Urdu or Urdu, reply clearly in Roman Urdu! If they ask in English, reply in English.
+2. Cite the Record ID & Source (e.g., [MED-004 | NIH NIDDK]).
+3. Highlight emergency symptoms in bold as **🚨 Emergency Warning Signs**.
+4. If the answer is not in the context, say: "I do not have verified clinical guidelines for this question. Please consult a physician."
+5. End with: *Disclaimer: For educational purposes only; not a substitute for professional medical advice.*"""),
     ("human", "[CLINICAL CONTEXT]:\n{context}\n\n[QUESTION]:\n{question}")
 ])
 
+# Lightweight chain to normalize Roman Urdu queries into English for accurate ChromaDB search
+query_translator = (
+    ChatPromptTemplate.from_template(
+        "Translate the following medical question into concise English medical search keywords. "
+        "If it is already in English, return it unchanged. Return ONLY the English query:\n{question}"
+    )
+    | llm
+    | StrOutputParser()
+)
+
 rag_chain = prompt | llm | StrOutputParser()
 
+# 4. PDF Uploader Function (Required by app.py!)
 def index_uploaded_pdfs(pdf_paths: list[str]) -> str:
-    """Uses LangChain's PyPDFLoader and RecursiveCharacterTextSplitter in 5 lines!"""
+    """Uses LangChain's PyPDFLoader and RecursiveCharacterTextSplitter to index PDFs."""
     splitter = RecursiveCharacterTextSplitter(chunk_size=650, chunk_overlap=100)
     new_docs = []
     for path in pdf_paths:
@@ -86,16 +102,19 @@ def index_uploaded_pdfs(pdf_paths: list[str]) -> str:
     vectorstore.add_documents(new_docs)
     return f"✅ Added {len(new_docs)} chunks from {len(pdf_paths)} PDF(s) via LangChain!"
 
-def ask_med_langchain(question: str, specialty: str = "All Specialties", max_distance: float = 0.70):
-    """Retrieves via LangChain Chroma with score thresholding & invokes the LCEL chain."""
+# 5. Main Query Function (Required by app.py!)
+def ask_med_langchain(question: str, specialty: str = "All Specialties", max_distance: float = 0.80):
+    """Translates Roman Urdu for vector search, retrieves via Multilingual MiniLM, and answers in the user's language."""
     filter_dict = None if specialty == "All Specialties" else {"category": specialty}
     
-    # One-line similarity search with score in LangChain!
-    results = vectorstore.similarity_search_with_score(question, k=3, filter=filter_dict)
+    # Normalize Roman Urdu / Multilingual query into English medical terms for ChromaDB search
+    english_search_query = query_translator.invoke({"question": question}).strip()
+    
+    results = vectorstore.similarity_search_with_score(english_search_query, k=3, filter=filter_dict)
     if not results:
         return "⚠️ No records found for this specialty.", "No chunks retrieved."
 
-    inspector = "\n\n".join([
+    inspector = f"🔄 Normalized Search Query: {english_search_query}\n\n" + "\n\n".join([
         f"[{doc.metadata['id']} | {doc.metadata['source']} | Distance: {score:.3f}]\n{doc.page_content}"
         for doc, score in results
     ])
@@ -104,6 +123,6 @@ def ask_med_langchain(question: str, specialty: str = "All Specialties", max_dis
     if best_score > max_distance:
         return f"🛑 **Safety Guardrail Triggered:** Distance `{best_score:.3f}` > `{max_distance}`. Outside clinical knowledge base.", inspector
 
-    # Invoke the LangChain pipeline!
+    # Pass the ORIGINAL user question so Gemini replies in Roman Urdu if asked in Roman Urdu
     answer = rag_chain.invoke({"context": inspector, "question": question})
     return answer, inspector
