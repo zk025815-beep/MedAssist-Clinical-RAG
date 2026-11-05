@@ -60,7 +60,6 @@ with st.sidebar:
 st.title("🏥 MedAssist AI — Clinical FAQ & Guideline Assistant")
 st.caption(
     "Powered by **NIH / WHO Clinical FAQs**, **LangChain**, **ChromaDB Metadata Filtering**, "
-    "and **Gemini 2.5 Flash** with strict non-hallucination guardrails."
 )
 
 # Initialize chat history in Streamlit Session State
