@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 from langchain_core.documents import Document
 from langchain_core.prompts import ChatPromptTemplate
@@ -7,15 +8,17 @@ from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI
 
-# Load GEMINI_API_KEY from .env
-load_dotenv()
+# 1. Load .env from current or parent folder
+current_dir = Path(__file__).resolve().parent
+parent_dir = current_dir.parent
+load_dotenv(current_dir / ".env") or load_dotenv(parent_dir / ".env") or load_dotenv()
 
-# 1. Core NIH/WHO Clinical FAQs converted into LangChain 'Document' objects
+# 2. Core NIH/WHO Clinical FAQs (CLINICAL_DOCS required by your app.py!)
 CLINICAL_DOCS = [
     Document(
-        page_content="CONDITION: Dengue Fever | Q: Warning signs & painkillers to avoid? | A: High fever (40°C/104°F), headache, eye pain. WARNING SIGNS: severe abdominal pain, persistent vomiting, bleeding gums/nose, blood in vomit/stool. MEDICATION RULE: Take ONLY Paracetamol. Strictly AVOID Aspirin, Ibuprofen, Naproxen (NSAIDs) due to fatal internal bleeding risk.",
+        page_content="CONDITION: Dengue Fever | Q: Warning signs & painkillers to avoid? | A: High fever (40°C/104°F), headache, eye pain. WARNING SIGNS: severe abdominal pain, persistent vomiting, bleeding gums/nose, blood in vomit/stool. MEDICATION RULE: Take ONLY Paracetamol (Panadol). Strictly AVOID Aspirin (Disprin), Ibuprofen (Brufen), Naproxen (NSAIDs) due to fatal internal bleeding risk.",
         metadata={"id": "MED-001", "category": "Infectious Diseases", "source": "WHO / NIH Guidelines"}
     ),
     Document(
@@ -27,7 +30,7 @@ CLINICAL_DOCS = [
         metadata={"id": "MED-003", "category": "Endocrinology & Metabolic", "source": "NIH NIDDK"}
     ),
     Document(
-        page_content="CONDITION: Hypoglycemia (Low Blood Sugar) | Q: 15-15 Rule treatment? | A: Below 70 mg/dL causes shakiness, sweating, dizziness. 15-15 Rule: Take 15g fast-acting carbs (half cup juice, 1 tbsp sugar/honey, or 3-4 glucose tabs), wait 15 mins, recheck. Repeat if <70 mg/dL. If unconscious, give Glucagon injection, NOT oral food/drink.",
+        page_content="CONDITION: Hypoglycemia (Low Blood Sugar) | Q: 15-15 Rule treatment? | A: Below 70 mg/dL causes shakiness, sweating, dizziness. 15-15 Rule: Take 15g fast-acting carbs (half cup juice, 1 tbsp sugar/honey, or 3-4 glucose tabs), wait 15 mins, recheck. Repeat if <70 mg/dL. If unconscious (behosh), give Glucagon injection, NOT oral food/drink.",
         metadata={"id": "MED-004", "category": "Endocrinology & Metabolic", "source": "NIH NIDDK"}
     ),
     Document(
@@ -48,7 +51,7 @@ CLINICAL_DOCS = [
     )
 ]
 
-# 2. Initialize Multilingual Embeddings, VectorStore & LLM
+# 3. Initialize Multilingual Embeddings & ChromaDB
 embeddings = HuggingFaceEmbeddings(
     model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 )
@@ -60,9 +63,22 @@ vectorstore = Chroma.from_documents(
     collection_metadata={"hnsw:space": "cosine"}
 )
 
-llm = ChatGoogleGenerativeAI(model="gemini-3.5-flash", temperature=0.0)
+# 4. Initialize OpenRouter LLM (Replaces Gemini!)
+openrouter_key = os.getenv("OPENROUTER_API_KEY")
 
-# 3. LangChain Prompt Templates & LCEL Chains
+if not openrouter_key:
+    raise ValueError(
+        "❌ OPENROUTER_API_KEY nahi mili! Apni .env file mein OPENROUTER_API_KEY=sk-or-v1-... add karein."
+    )
+
+llm = ChatOpenAI(
+    model="openrouter/free",  # <-- Yeh hamesha active free model pick karega
+    api_key=openrouter_key,
+    base_url="https://openrouter.ai/api/v1",
+    temperature=0.0
+)
+
+# 5. LangChain Prompts & Chains
 prompt = ChatPromptTemplate.from_messages([
     ("system", """You are MedAssist AI. Answer STRICTLY using the [CLINICAL CONTEXT] below.
 1. LANGUAGE MATCHING: If the user asks in Roman Urdu or Urdu, reply clearly in Roman Urdu! If they ask in English, reply in English.
@@ -73,7 +89,6 @@ prompt = ChatPromptTemplate.from_messages([
     ("human", "[CLINICAL CONTEXT]:\n{context}\n\n[QUESTION]:\n{question}")
 ])
 
-# Lightweight chain to normalize Roman Urdu queries into English for accurate ChromaDB search
 query_translator = (
     ChatPromptTemplate.from_template(
         "Translate the following medical question into concise English medical search keywords. "
@@ -85,9 +100,8 @@ query_translator = (
 
 rag_chain = prompt | llm | StrOutputParser()
 
-# 4. PDF Uploader Function (Required by app.py!)
+# 6. PDF Uploader Function
 def index_uploaded_pdfs(pdf_paths: list[str]) -> str:
-    """Uses LangChain's PyPDFLoader and RecursiveCharacterTextSplitter to index PDFs."""
     splitter = RecursiveCharacterTextSplitter(chunk_size=650, chunk_overlap=100)
     new_docs = []
     for path in pdf_paths:
@@ -102,12 +116,10 @@ def index_uploaded_pdfs(pdf_paths: list[str]) -> str:
     vectorstore.add_documents(new_docs)
     return f"✅ Added {len(new_docs)} chunks from {len(pdf_paths)} PDF(s) via LangChain!"
 
-# 5. Main Query Function (Required by app.py!)
+# 7. Main Query Function
 def ask_med_langchain(question: str, specialty: str = "All Specialties", max_distance: float = 0.80):
-    """Translates Roman Urdu for vector search, retrieves via Multilingual MiniLM, and answers in the user's language."""
     filter_dict = None if specialty == "All Specialties" else {"category": specialty}
     
-    # Normalize Roman Urdu / Multilingual query into English medical terms for ChromaDB search
     english_search_query = query_translator.invoke({"question": question}).strip()
     
     results = vectorstore.similarity_search_with_score(english_search_query, k=3, filter=filter_dict)
@@ -123,6 +135,5 @@ def ask_med_langchain(question: str, specialty: str = "All Specialties", max_dis
     if best_score > max_distance:
         return f"🛑 **Safety Guardrail Triggered:** Distance `{best_score:.3f}` > `{max_distance}`. Outside clinical knowledge base.", inspector
 
-    # Pass the ORIGINAL user question so Gemini replies in Roman Urdu if asked in Roman Urdu
     answer = rag_chain.invoke({"context": inspector, "question": question})
     return answer, inspector
