@@ -1,21 +1,72 @@
 import os
+import re
 from pathlib import Path
 from dotenv import load_dotenv
 from langchain_core.documents import Document
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
 from langchain_openai import ChatOpenAI
 
-# 1. Load .env from current or parent folder
+# 1. Detect pure formatting/meta requests that should NOT trigger a new DB search
+FORMAT_PATTERNS = re.compile(
+    r"^(make it|keep it|can you make it|please make it|rewrite|summarize|shorten|"
+    r"shorter|brief|concise|simpler|bullet points|in bullets|translate|explain like|"
+    r"isko chota|mukhtasir|asan الفاظ|urdu mein|in urdu|in english)\b",
+    re.IGNORECASE
+)
+
+def is_formatting_followup(query: str, chat_history: list) -> bool:
+    """Returns True if the user is asking to reformat/shorten the previous answer."""
+    if not chat_history:
+        return False
+    clean_q = query.strip()
+    if FORMAT_PATTERNS.search(clean_q) and len(clean_q.split()) <= 12:
+        return True
+    return False
+
+
+def contextualize_medical_query(llm, query: str, chat_history: list) -> str:
+    """
+    Rewrites follow-up clinical questions (e.g., 'What about in pregnancy?')
+    into standalone search queries for ChromaDB.
+    """
+    if not chat_history:
+        return query
+
+    recent_turns = ""
+    for msg in chat_history[-4:]:
+        role = "Clinician" if msg.get("role") == "user" else "Assistant"
+        recent_turns += f"{role}: {msg.get('content', '')[:300]}\n"
+
+    rewrite_prompt = [
+        SystemMessage(content=(
+            "Given the recent clinical conversation and a follow-up question, "
+            "rewrite the follow-up question into a standalone English medical search query "
+            "that includes the specific condition or drug being discussed. "
+            "If the question is already standalone, return it in concise English. "
+            "Return ONLY the rewritten query text, nothing else."
+        )),
+        HumanMessage(content=f"Conversation:\n{recent_turns}\nFollow-up: {query}\nStandalone Query:")
+    ]
+
+    try:
+        rewritten = llm.invoke(rewrite_prompt).content.strip()
+        return rewritten if rewritten else query
+    except Exception:
+        return query
+
+
+# 2. Load .env from current or parent folder
 current_dir = Path(__file__).resolve().parent
 parent_dir = current_dir.parent
 load_dotenv(current_dir / ".env") or load_dotenv(parent_dir / ".env") or load_dotenv()
 
-# 2. Core NIH/WHO Clinical FAQs (CLINICAL_DOCS required by your app.py!)
+# 3. Core NIH/WHO Clinical FAQs
 CLINICAL_DOCS = [
     Document(
         page_content="CONDITION: Dengue Fever | Q: Warning signs & painkillers to avoid? | A: High fever (40°C/104°F), headache, eye pain. WARNING SIGNS: severe abdominal pain, persistent vomiting, bleeding gums/nose, blood in vomit/stool. MEDICATION RULE: Take ONLY Paracetamol (Panadol). Strictly AVOID Aspirin (Disprin), Ibuprofen (Brufen), Naproxen (NSAIDs) due to fatal internal bleeding risk.",
@@ -51,7 +102,7 @@ CLINICAL_DOCS = [
     )
 ]
 
-# 3. Initialize Multilingual Embeddings & ChromaDB
+# 4. Initialize Multilingual Embeddings & ChromaDB
 embeddings = HuggingFaceEmbeddings(
     model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 )
@@ -63,7 +114,7 @@ vectorstore = Chroma.from_documents(
     collection_metadata={"hnsw:space": "cosine"}
 )
 
-# 4. Initialize OpenRouter LLM (Replaces Gemini!)
+# 5. Initialize OpenRouter LLM
 openrouter_key = os.getenv("OPENROUTER_API_KEY")
 
 if not openrouter_key:
@@ -72,21 +123,20 @@ if not openrouter_key:
     )
 
 llm = ChatOpenAI(
-    model="openrouter/free",  # <-- Yeh hamesha active free model pick karega
+    model="openrouter/free",
     api_key=openrouter_key,
     base_url="https://openrouter.ai/api/v1",
     temperature=0.0
 )
 
-# 5. LangChain Prompts & Chains
+# 6. LangChain Prompts & Chains (Includes Chat History Support)
 prompt = ChatPromptTemplate.from_messages([
-    ("system", """You are MedAssist AI. Answer STRICTLY using the [CLINICAL CONTEXT] below.
+    ("system", """You are MedAssist AI. Answer STRICTLY using the [CLINICAL CONTEXT] and [RECENT CONVERSATION] below.
 1. LANGUAGE MATCHING: If the user asks in Roman Urdu or Urdu, reply clearly in Roman Urdu! If they ask in English, reply in English.
 2. Cite the Record ID & Source (e.g., [MED-004 | NIH NIDDK]).
-3. Highlight emergency symptoms in bold as **🚨 Emergency Warning Signs**.
-4. If the answer is not in the context, say: "I do not have verified clinical guidelines for this question. Please consult a physician."
-5. End with: *Disclaimer: For educational purposes only; not a substitute for professional medical advice.*"""),
-    ("human", "[CLINICAL CONTEXT]:\n{context}\n\n[QUESTION]:\n{question}")
+3. Structure your answer clearly into Recommended actions, what to Avoid (if applicable), and Emergency Warning Signs (if applicable).
+4. If the answer is not in the context, say: "I do not have verified clinical guidelines for this question. Please consult a physician." """),
+    ("human", "[RECENT CONVERSATION]:\n{chat_history}\n\n[CLINICAL CONTEXT]:\n{context}\n\n[QUESTION]:\n{question}")
 ])
 
 query_translator = (
@@ -100,7 +150,7 @@ query_translator = (
 
 rag_chain = prompt | llm | StrOutputParser()
 
-# 6. PDF Uploader Function
+# 7. PDF Uploader Function
 def index_uploaded_pdfs(pdf_paths: list[str]) -> str:
     splitter = RecursiveCharacterTextSplitter(chunk_size=650, chunk_overlap=100)
     new_docs = []
@@ -114,26 +164,93 @@ def index_uploaded_pdfs(pdf_paths: list[str]) -> str:
             }
         new_docs.extend(pages)
     vectorstore.add_documents(new_docs)
-    return f"✅ Added {len(new_docs)} chunks from {len(pdf_paths)} PDF(s) via LangChain!"
+    return f"Added {len(new_docs)} chunks from {len(pdf_paths)} PDF(s) via LangChain!"
 
-# 7. Main Query Function
-def ask_med_langchain(question: str, specialty: str = "All Specialties", max_distance: float = 0.80):
-    filter_dict = None if specialty == "All Specialties" else {"category": specialty}
-    
-    english_search_query = query_translator.invoke({"question": question}).strip()
-    
-    results = vectorstore.similarity_search_with_score(english_search_query, k=3, filter=filter_dict)
-    if not results:
-        return "⚠️ No records found for this specialty.", "No chunks retrieved."
+# 8. Main Query Function (Fixed: Always returns a 2-tuple `(answer, sources)`)
+def ask_med_langchain(user_query: str, selected_specialty: str = "All Specialties", chat_history: list = None):
+    if chat_history is None:
+        chat_history = []
 
-    inspector = f"🔄 Normalized Search Query: {english_search_query}\n\n" + "\n\n".join([
-        f"[{doc.metadata['id']} | {doc.metadata['source']} | Distance: {score:.3f}]\n{doc.page_content}"
-        for doc, score in results
-    ])
+    # Find the last assistant response & its sources (if any)
+    last_assistant_msg = next(
+        (m for m in reversed(chat_history) if m.get("role") == "assistant"),
+        None
+    )
 
-    best_score = results[0][1]
-    if best_score > max_distance:
-        return f"🛑 **Safety Guardrail Triggered:** Distance `{best_score:.3f}` > `{max_distance}`. Outside clinical knowledge base.", inspector
+    # =========================================================================
+    # PATH A: DIRECT REWRITE / SHORTEN (NO NEW CHROMADB SEARCH)
+    # =========================================================================
+    if is_formatting_followup(user_query, chat_history) and last_assistant_msg:
+        rewrite_messages = [
+            SystemMessage(content=(
+                "You are MedAssist AI. Modify the previous clinical response strictly "
+                "according to the user's formatting instruction (e.g., make it shorter, "
+                "use bullet points). Preserve all clinical accuracy, safety warnings, "
+                "and existing source tags like [MED-001 | WHO / NIH Guidelines]. Do not add new medical claims."
+            )),
+            AIMessage(content=last_assistant_msg["content"]),
+            HumanMessage(content=f"Instruction: {user_query}")
+        ]
+        modified_answer = llm.invoke(rewrite_messages).content
+        return modified_answer, last_assistant_msg.get("sources")
 
-    answer = rag_chain.invoke({"context": inspector, "question": question})
-    return answer, inspector
+    # =========================================================================
+    # PATH B: CLINICAL QUESTION OR FOLLOW-UP (CONTEXTUALIZE -> RETRIEVE -> ANSWER)
+    # =========================================================================
+    # 1. Contextualize follow-up query with chat history, then ensure English keywords for search
+    if chat_history:
+        search_query = contextualize_medical_query(llm, user_query, chat_history)
+    else:
+        try:
+            search_query = query_translator.invoke({"question": user_query}).strip()
+        except Exception:
+            search_query = user_query
+
+    # 2. Query ChromaDB with optional Specialty Metadata Filter
+    filter_dict = None if selected_specialty == "All Specialties" else {"category": selected_specialty}
+    results_with_scores = vectorstore.similarity_search_with_score(
+        search_query,
+        k=3,
+        filter=filter_dict
+    )
+
+    if not results_with_scores:
+        return (
+            "I do not have verified clinical guidelines for this question in the selected specialty. Please consult a physician.",
+            None
+        )
+
+    # 3. Format context for LLM and evidence string for UI cards
+    context_blocks = []
+    source_blocks = []
+    for doc, score in results_with_scores:
+        doc_id = doc.metadata.get("id", "REF")
+        doc_source = doc.metadata.get("source", "WHO / NIH Guidelines")
+        doc_cat = doc.metadata.get("category", "General")
+        context_blocks.append(f"[{doc_id} | {doc_source} | Category: {doc_cat}]\n{doc.page_content}")
+        source_blocks.append(
+            f"Source: {doc_source} ({doc_cat})\n"
+            f"Cosine Distance: {score:.4f}\n"
+            f"{doc.page_content}"
+        )
+
+    context_str = "\n\n".join(context_blocks)
+    retrieved_sources_str = "\n\n".join(source_blocks)
+
+    # 4. Format recent conversation history for prompt
+    history_block = "No prior messages."
+    if chat_history:
+        lines = []
+        for msg in chat_history[-4:]:
+            role = "Clinician" if msg.get("role") == "user" else "MedAssist AI"
+            lines.append(f"{role}: {msg.get('content', '')[:400]}")
+        history_block = "\n".join(lines)
+
+    # 5. Generate final clinical response & return 2-tuple
+    answer = rag_chain.invoke({
+        "chat_history": history_block,
+        "context": context_str,
+        "question": user_query
+    })
+
+    return answer, retrieved_sources_str

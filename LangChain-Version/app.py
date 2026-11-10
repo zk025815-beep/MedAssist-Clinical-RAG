@@ -15,7 +15,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Neutral dark-grey user avatar & teal assistant avatar (SVG Data URIs)
 USER_AVATAR = (
     "data:image/svg+xml;utf8,"
     "<svg xmlns='http://www.w3.org/2000/svg' width='36' height='36' viewBox='0 0 24 24' "
@@ -35,7 +34,7 @@ BOT_AVATAR = (
 )
 
 # ==============================================================================
-# 2. DARK THEME DESIGN SYSTEM & BUG-FIXED CSS
+# 2. DARK THEME DESIGN SYSTEM & UI FIXES CSS
 # ==============================================================================
 st.markdown(
     """
@@ -46,7 +45,7 @@ st.markdown(
 
     <style>
     /* -------------------------------------------------------------------------
-       BUG FIX 1: KEEP HEADER & SIDEBAR TOGGLE CLICKABLE; HIDE ONLY CHROME
+       KEEP HEADER & SIDEBAR TOGGLE CLICKABLE; HIDE ONLY CHROME
        ------------------------------------------------------------------------- */
     .stDeployButton,
     [data-testid="stAppDeployButton"],
@@ -62,20 +61,9 @@ st.markdown(
         border-bottom: none !important;
     }
 
-    /* Style the Sidebar Open/Close Toggle Buttons (Works across Streamlit 1.30 - 1.42+) */
     [data-testid="stSidebarCollapsedControl"] button,
     [data-testid="collapsedControl"] button,
     [data-testid="stExpandSidebarButton"],
-    [data-testid="stSidebarCollapseButton"] button {
-        background-color: #111A2B !important;
-        border: 1px solid #14B8A6 !important;
-        border-radius: 8px !important;
-        color: #14B8A6 !important;
-        box-shadow: 0 2px 10px rgba(20, 184, 166, 0.25) !important;
-    }
-
-    [data-testid="stSidebarCollapsedControl"] button,
-    [data-testid="collapsedControl"] button,
     [data-testid="stSidebarCollapseButton"] button {
         background-color: #111A2B !important;
         border: 1px solid #1F2A3D !important;
@@ -94,18 +82,21 @@ st.markdown(
     }
 
     /* -------------------------------------------------------------------------
-       COLOR TOKENS & TYPOGRAPHY (BUG FIX 2: NEVER APPLY INTER TO * OR ICONS)
+       COLOR TOKENS & TYPOGRAPHY
        ------------------------------------------------------------------------- */
     :root {
         --bg-main: #0B1220;
         --bg-sidebar: #0F172A;
         --bg-card: #111A2B;
+        --bg-card-inner: #0E1625;
         --border-color: #1F2A3D;
         --text-primary: #E5E7EB;
         --text-muted: #9CA3AF;
         --teal-primary: #14B8A6;
         --teal-hover: #2DD4BF;
         --teal-surface: rgba(20, 184, 166, 0.12);
+        --amber-border: #F59E0B;
+        --amber-text: #FCD34D;
         --danger-bg: #2A1215;
         --danger-border: #F87171;
         --danger-text: #FCA5A5;
@@ -124,7 +115,6 @@ st.markdown(
         letter-spacing: -0.015em;
     }
 
-    /* Preserve Material Icons font so expander arrows never render as "_arrow_right" */
     span[data-testid="stIconMaterial"],
     .material-icons,
     .material-symbols-rounded,
@@ -147,7 +137,7 @@ st.markdown(
     }
 
     /* -------------------------------------------------------------------------
-       MAIN CONTAINER & PADDING (BUG FIX 7 & 8: 24PX TOP, 140PX BOTTOM, 960PX MAX)
+       FIX 6: REDUCE TOP PADDING BY ~30% (16PX TOP, 140PX BOTTOM, 960PX MAX)
        ------------------------------------------------------------------------- */
     .stApp {
         background-color: var(--bg-main) !important;
@@ -156,7 +146,7 @@ st.markdown(
     .main .block-container {
         max-width: 960px !important;
         margin: 0 auto !important;
-        padding-top: 24px !important;
+        padding-top: 16px !important;
         padding-bottom: 140px !important;
     }
 
@@ -169,7 +159,7 @@ st.markdown(
     }
 
     [data-testid="stSidebar"] .block-container {
-        padding-top: 20px !important;
+        padding-top: 16px !important;
         padding-bottom: 32px !important;
     }
 
@@ -218,7 +208,6 @@ st.markdown(
         box-shadow: 0 0 6px var(--teal-primary);
     }
 
-    /* Dark Card Containers */
     [data-testid="stVerticalBlockBorderWrapper"] {
         background-color: var(--bg-card) !important;
         border: 1px solid var(--border-color) !important;
@@ -250,7 +239,6 @@ st.markdown(
         margin-bottom: 10px;
     }
 
-    /* Dark Inputs, Selectbox & File Uploader (No White Boxes) */
     div[data-baseweb="select"] > div {
         background-color: var(--bg-main) !important;
         border: 1px solid var(--border-color) !important;
@@ -272,7 +260,6 @@ st.markdown(
         border-radius: 8px !important;
     }
 
-    /* Buttons: Primary vs Secondary + No Stuck Focus Outlines */
     button:focus, button:focus-visible, button:active {
         outline: none !important;
         box-shadow: none !important;
@@ -314,16 +301,16 @@ st.markdown(
     }
 
     /* -------------------------------------------------------------------------
-       HEADER BANNER (TEAL GRADIENT #0F766E TO #115E59 + SUBTLE GLOW)
+       HEADER BANNER
        ------------------------------------------------------------------------- */
     .hero-banner {
         background: linear-gradient(135deg, #0F766E 0%, #115E59 100%);
         border: 1px solid rgba(45, 212, 191, 0.28);
         border-radius: 12px;
-        padding: 26px 30px;
+        padding: 24px 28px;
         color: #E5E7EB;
         box-shadow: 0 8px 28px rgba(15, 118, 110, 0.25);
-        margin-bottom: 24px;
+        margin-bottom: 20px;
         display: flex;
         flex-wrap: wrap;
         align-items: center;
@@ -395,7 +382,7 @@ st.markdown(
     }
 
     /* -------------------------------------------------------------------------
-       BUG FIX 6: QUICK-TEST CARDS (EQUAL WIDTH, 2 LINES, NO TRUNCATION, TEAL GLOW)
+       FIX 5: QUICK-TEST CARDS (TITLE LINE 1, DESC LINE 2, NO TRUNCATION, EQUAL HEIGHT)
        ------------------------------------------------------------------------- */
     .section-label {
         font-size: 0.8rem;
@@ -414,14 +401,32 @@ st.markdown(
         font-size: 17px;
     }
 
+    div[data-testid="column"] {
+        display: flex !important;
+        flex-direction: column !important;
+    }
+
+    div[data-testid="column"] > div {
+        flex: 1 !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+
+    div[data-testid="column"] .stButton {
+        flex: 1 !important;
+        display: flex !important;
+    }
+
     div[data-testid="column"] button[kind="secondary"] {
-        min-height: 92px !important;
-        height: auto !important;
+        height: 96px !important;
+        min-height: 96px !important;
         width: 100% !important;
-        text-align: left !important;
-        justify-content: flex-start !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
         align-items: flex-start !important;
-        padding: 15px 18px !important;
+        text-align: left !important;
+        padding: 14px 16px !important;
         background-color: var(--bg-card) !important;
         border: 1px solid var(--border-color) !important;
         border-radius: 12px !important;
@@ -436,40 +441,37 @@ st.markdown(
         background-color: var(--bg-card) !important;
     }
 
-    div[data-testid="column"] button[kind="secondary"]:focus,
-    div[data-testid="column"] button[kind="secondary"]:focus-visible,
-    div[data-testid="column"] button[kind="secondary"]:active {
-        outline: none !important;
-        border-color: var(--border-color) !important;
-        box-shadow: var(--card-shadow) !important;
-    }
-
     div[data-testid="column"] button[kind="secondary"] [data-testid="stMarkdownContainer"] {
         width: 100% !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 4px !important;
     }
 
     div[data-testid="column"] button[kind="secondary"] [data-testid="stMarkdownContainer"] p {
-        font-size: 0.82rem !important;
+        font-size: 0.81rem !important;
         font-weight: 400 !important;
         color: var(--text-muted) !important;
-        line-height: 1.45 !important;
+        line-height: 1.38 !important;
         margin: 0 !important;
         white-space: normal !important;
         overflow: visible !important;
-        text-overflow: unset !important;
+        text-overflow: clip !important;
+        word-break: break-word !important;
     }
 
     div[data-testid="column"] button[kind="secondary"] [data-testid="stMarkdownContainer"] strong {
         display: block !important;
-        font-size: 0.94rem !important;
+        font-size: 0.92rem !important;
         font-weight: 600 !important;
         color: var(--text-primary) !important;
-        margin-bottom: 4px !important;
-        line-height: 1.3 !important;
+        margin-bottom: 3px !important;
+        line-height: 1.25 !important;
+        white-space: normal !important;
     }
 
     /* -------------------------------------------------------------------------
-       CHAT MESSAGES & CLINICAL ANSWER SECTIONS
+       FIX 2 & 3: CLINICAL ANSWER CARDS, AMBER HOSPITALIZE CARD & SOURCE CHIP LINE
        ------------------------------------------------------------------------- */
     [data-testid="stChatMessage"] {
         background-color: var(--bg-card) !important;
@@ -487,7 +489,7 @@ st.markdown(
     }
 
     .clinical-section {
-        margin-bottom: 18px;
+        margin-bottom: 16px;
     }
 
     .clinical-section-header {
@@ -515,14 +517,14 @@ st.markdown(
         color: var(--text-primary);
     }
 
-    /* Red Callout strictly for Safety / Avoid Alerts (#FCA5A5 on #2A1215 + 3px #F87171 left border) */
+    /* ONLY Avoid uses Red Callout (#FCA5A5 on #2A1215 + 3px #F87171 left border) */
     .avoid-callout {
         background-color: var(--danger-bg);
         border: 1px solid rgba(248, 113, 113, 0.25);
         border-left: 3px solid var(--danger-border);
         border-radius: 10px;
         padding: 14px 18px;
-        margin: 16px 0;
+        margin: 14px 0;
     }
 
     .avoid-callout-title {
@@ -546,9 +548,65 @@ st.markdown(
         color: var(--danger-text) !important;
     }
 
-    /* BUG FIX 3: Outside Available Guidelines Callout (Neutral Grey/Slate Card) */
+    /* Neutral Dark Card for "Signs to Monitor" */
+    .neutral-clinical-card {
+        background-color: var(--bg-card-inner);
+        border: 1px solid var(--border-color);
+        border-left: 3px solid #64748B;
+        border-radius: 10px;
+        padding: 14px 18px;
+        margin: 14px 0;
+    }
+
+    .neutral-card-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.92rem;
+        font-weight: 600;
+        color: var(--text-primary) !important;
+        margin-bottom: 6px;
+    }
+
+    .neutral-card-title .ms-icon {
+        color: var(--text-muted) !important;
+        font-size: 19px;
+    }
+
+    /* Neutral Dark Card with Amber Left Border for "When to Hospitalize" */
+    .amber-clinical-card {
+        background-color: var(--bg-card-inner);
+        border: 1px solid var(--border-color);
+        border-left: 3px solid var(--amber-border);
+        border-radius: 10px;
+        padding: 14px 18px;
+        margin: 14px 0;
+    }
+
+    .amber-card-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.92rem;
+        font-weight: 600;
+        color: var(--amber-text) !important;
+        margin-bottom: 6px;
+    }
+
+    .amber-card-title .ms-icon {
+        color: var(--amber-border) !important;
+        font-size: 19px;
+    }
+
+    .card-body-text {
+        font-size: 16px;
+        line-height: 1.65;
+        color: var(--text-primary) !important;
+    }
+
+    /* Outside Available Guidelines Callout */
     .out-of-scope-callout {
-        background-color: rgba(148, 163, 184, 0.08);
+        background-color: var(--bg-card-inner);
         border: 1px solid var(--border-color);
         border-left: 3px solid var(--text-muted);
         border-radius: 10px;
@@ -583,28 +641,35 @@ st.markdown(
         color: var(--text-muted) !important;
     }
 
-    /* BUG FIX 5: Rounded Source Chips */
+    /* FIX 3: Dedicated Source Chip Row on Its Own Line Below Answer */
+    .source-chip-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        margin-top: 14px;
+        margin-bottom: 4px;
+    }
+
     .source-chip {
         display: inline-flex;
         align-items: center;
-        gap: 4px;
+        gap: 5px;
         background-color: var(--teal-surface);
         color: var(--teal-hover) !important;
         border: 1px solid rgba(20, 184, 166, 0.35);
-        font-size: 0.76rem;
+        font-size: 0.78rem;
         font-weight: 600;
-        padding: 2px 10px;
+        padding: 4px 12px;
         border-radius: 999px;
-        margin: 0 3px;
-        vertical-align: baseline;
     }
 
     .source-chip .ms-icon {
-        font-size: 13px;
+        font-size: 14px;
         color: var(--teal-primary);
     }
 
-    /* BUG FIX 4: Single Muted Disclaimer Inside Answer Card */
+    /* Muted Disclaimer Inside Answer Card */
     .answer-disclaimer {
         display: flex;
         align-items: center;
@@ -613,7 +678,7 @@ st.markdown(
         border: 1px solid var(--border-color);
         border-radius: 8px;
         padding: 9px 13px;
-        margin-top: 14px;
+        margin-top: 12px;
         font-size: 0.8rem;
         color: var(--text-muted) !important;
     }
@@ -624,7 +689,7 @@ st.markdown(
     }
 
     /* -------------------------------------------------------------------------
-       EVIDENCE PANEL & CHUNK CARDS (DARK 12PX RADIUS)
+       FIX 4: STRUCTURED EVIDENCE CARDS (CONDITION, QUESTION, ANSWER)
        ------------------------------------------------------------------------- */
     [data-testid="stExpander"] {
         background-color: var(--bg-main) !important;
@@ -659,7 +724,7 @@ st.markdown(
         align-items: center;
         justify-content: space-between;
         gap: 10px;
-        margin-bottom: 8px;
+        margin-bottom: 10px;
         padding-bottom: 8px;
         border-bottom: 1px solid var(--border-color);
     }
@@ -718,14 +783,26 @@ st.markdown(
         border-radius: 999px;
     }
 
-    .evidence-snippet {
-        font-size: 0.84rem;
+    .evidence-field-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .evidence-field-row {
+        font-size: 0.85rem;
         line-height: 1.55;
+        color: var(--text-primary);
+    }
+
+    .evidence-field-label {
+        font-weight: 600;
         color: var(--text-muted);
+        margin-right: 6px;
     }
 
     /* -------------------------------------------------------------------------
-       EMPTY STATE & LOADING SKELETON
+       EMPTY STATE, SKELETON & FIXED INPUT
        ------------------------------------------------------------------------- */
     .empty-state-card {
         background-color: var(--bg-card);
@@ -828,9 +905,6 @@ st.markdown(
         border: 1px solid rgba(248, 113, 113, 0.35);
     }
 
-    /* -------------------------------------------------------------------------
-       BUG FIX 7: CHAT INPUT ALIGNMENT (MAX-WIDTH 960PX, CENTERED, DARK)
-       ------------------------------------------------------------------------- */
     [data-testid="stBottom"] {
         background-color: transparent !important;
     }
@@ -860,7 +934,6 @@ st.markdown(
         background-color: transparent !important;
     }
 
-    /* Fixed Footer Disclaimer under Chat Input */
     .fixed-bottom-disclaimer {
         position: fixed;
         bottom: 0;
@@ -882,92 +955,119 @@ st.markdown(
 
 
 # ==============================================================================
-# 3. DISPLAY FORMATTING HELPERS (REFUSAL HANDLING, CHIPS, DISCLAIMER DEDUP)
+# 3. DISPLAY FORMATTING HELPERS
 # ==============================================================================
 def strip_duplicate_disclaimers(text: str) -> str:
-    """
-    BUG FIX 4: Removes duplicate bold or inline LLM disclaimers so the disclaimer
-    appears only twice: once in the muted answer box and once in the fixed footer.
-    """
+    """Removes inline LLM disclaimers so the disclaimer is never duplicated."""
     cleaned = re.sub(
-        r'(?im)^\s*(?:\*\*|⚠️|Note:|Disclaimer:|Medical Disclaimer:)?\s*(?:medical\s+disclaimer\s*[:\-—]?\s*)?'
-        r'(?:this information is for clinical decision support|not a substitute for professional medical|'
-        r'please consult a qualified physician|always consult a healthcare professional).*$',
+        r'(?im)^\s*(?:\*\*|⚠️|Note:|Disclaimer:|Medical Disclaimer:|\*Disclaimer:)?\s*'
+        r'(?:medical\s+disclaimer\s*[:\-—]?\s*)?'
+        r'(?:for educational purposes only|this information is for clinical decision support|'
+        r'not a substitute for professional medical|please consult a qualified physician|'
+        r'always consult a healthcare professional).*$',
         '',
         text
     )
     return cleaned.strip()
 
 
-def convert_citations_to_chips(text: str) -> str:
+def extract_and_strip_citations(text: str) -> tuple[str, list[str]]:
     """
-    BUG FIX 5: Replaces both bracketed citations like [MED-001 | WHO / NIH Guidelines]
-    and bare raw IDs like MED-001 with clean rounded source chips ("WHO Guidelines").
+    FIX 3: Extracts all citations like [MED-001 | WHO / NIH Guidelines] or bare MED-001,
+    removes them from the inline text (no brackets left behind), and returns a list of
+    clean source labels to render on their own line below the answer.
     """
-    def _bracket_replacer(match):
+    sources_found = []
+
+    def _add_source(label: str):
+        clean_lbl = label.strip(" []|:-·")
+        if clean_lbl and clean_lbl not in sources_found:
+            sources_found.append(clean_lbl)
+
+    def _bracket_extractor(match):
         raw_inner = match.group(1).strip()
         page_match = re.search(r'(?:p\.?|page)\s*(\d+)', raw_inner, re.I)
         page_suffix = f" · p.{page_match.group(1)}" if page_match else ""
 
         if "WHO" in raw_inner.upper() and "NIH" in raw_inner.upper():
-            label = f"WHO / NIH Guidelines{page_suffix}"
+            _add_source(f"WHO / NIH Guidelines{page_suffix}")
+        elif "WHO" in raw_inner.upper() and "CDC" in raw_inner.upper():
+            _add_source(f"WHO / CDC Guidelines{page_suffix}")
+        elif "NIH" in raw_inner.upper() and "NIDDK" in raw_inner.upper():
+            _add_source(f"NIH NIDDK Guidelines{page_suffix}")
+        elif "NIH" in raw_inner.upper() and "NHLBI" in raw_inner.upper():
+            _add_source(f"AHA / NIH NHLBI Guidelines{page_suffix}")
         elif "WHO" in raw_inner.upper():
-            label = f"WHO Guidelines{page_suffix}"
+            _add_source(f"WHO Guidelines{page_suffix}")
         elif "NIH" in raw_inner.upper():
-            label = f"NIH Guidelines{page_suffix}"
+            _add_source(f"NIH Guidelines{page_suffix}")
         elif "|" in raw_inner:
             parts = [p.strip() for p in raw_inner.split("|") if p.strip() and not re.match(r'^MED-\d+$', p.strip(), re.I)]
-            label = (parts[-1] if parts else "Clinical Guidelines") + page_suffix
-        elif re.match(r'^MED-\d+$', raw_inner, re.I):
-            label = "WHO / NIH Guidelines"
+            _add_source((parts[-1] if parts else "Clinical Guidelines") + page_suffix)
         else:
             cleaned_id = re.sub(r'\bMED-\d+\b\s*[\|\-:]?\s*', '', raw_inner, flags=re.I).strip()
-            label = cleaned_id if cleaned_id else "Clinical Guidelines"
+            _add_source(cleaned_id if cleaned_id else "WHO / NIH Guidelines")
+        return ""
 
-        return (
-            f'<span class="source-chip">'
-            f'<span class="ms-icon">verified</span>{html.escape(label)}'
-            f'</span>'
-        )
+    # 1. Extract and strip bracketed citations
+    pattern_brackets = r'\s*\[([^\[\]]*(?:MED-\d+|PDF-P\d+|WHO|NIH|CDC|AHA|Guideline|Page|p\.\s*\d+|\|)[^\[\]]*)\]'
+    cleaned_text = re.sub(pattern_brackets, _bracket_extractor, text, flags=re.IGNORECASE)
 
-    # 1. Replace bracketed citations e.g. [MED-001 | WHO Guidelines]
-    pattern_brackets = r'\[([^\[\]]*(?:MED-\d+|WHO|NIH|Guideline|PDF|Page|p\.\s*\d+|\|)[^\[\]]*)\]'
-    out = re.sub(pattern_brackets, _bracket_replacer, text, flags=re.IGNORECASE)
+    # 2. Extract and strip any bare MED-XXX tokens
+    if re.search(r'\bMED-\d+\b', cleaned_text):
+        _add_source("WHO / NIH Guidelines")
+        cleaned_text = re.sub(r'\(?\[?\bMED-\d+\b\]?\)?', '', cleaned_text)
 
-    # 2. Replace any remaining bare MED-001 tokens outside brackets
-    out = re.sub(
-        r'\bMED-\d+\b',
-        '<span class="source-chip"><span class="ms-icon">verified</span>WHO Guidelines</span>',
-        out
-    )
-    return out
+    # Clean up any leftover empty brackets or double spaces before punctuation
+    cleaned_text = re.sub(r'\[\s*\]|\(\s*\)', '', cleaned_text)
+    cleaned_text = re.sub(r'\s+([.,;:])', r'\1', cleaned_text)
+    return cleaned_text.strip(), sources_found
 
 
 def format_inline_markdown(text: str) -> str:
-    """Safely formats bold text, bullet points, and source chips."""
-    escaped = html.escape(text.strip())
-    escaped = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', escaped)
-    with_chips = convert_citations_to_chips(escaped)
+    """
+    FIX 1: Converts paired **bold** and *italic* properly, and strips any unmatched
+    stray "**" or "*" (such as "Actions:**") so literal asterisks never appear.
+    """
+    if not text:
+        return ""
 
-    lines = [line.strip() for line in with_chips.split("\n") if line.strip()]
+    escaped = html.escape(text.strip())
+    # Strip leading markdown heading hashes and stray emoji alerts
+    escaped = re.sub(r'(?m)^\s*#{1,6}\s*', '', escaped)
+    escaped = escaped.replace("🚨", "")
+
+    # Convert complete **bold** pairs
+    escaped = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', escaped)
+    # Strip any remaining stray "**" (e.g., from split headers like "Actions:**")
+    escaped = escaped.replace("**", "")
+
+    # Convert valid *italic* pairs (not spanning newlines)
+    escaped = re.sub(r'\*([^\*\n]+?)\*', r'<em>\1</em>', escaped)
+
+    lines = [line.strip() for line in escaped.split("\n") if line.strip()]
     formatted_lines = []
     for line in lines:
+        # Strip leading bullet marker first, then strip any stray lone asterisks
         if line.startswith(("- ", "• ", "* ")):
-            formatted_lines.append(f'<div style="margin-bottom: 6px; padding-left: 12px;">• {line[2:]}</div>')
+            item_text = line[2:].strip().strip("*").strip()
+            if item_text:
+                formatted_lines.append(f'<div style="margin-bottom: 6px; padding-left: 12px;">• {item_text}</div>')
         else:
-            formatted_lines.append(f'<div style="margin-bottom: 8px;">{line}</div>')
+            clean_line = line.strip("*").strip()
+            if clean_line:
+                formatted_lines.append(f'<div style="margin-bottom: 8px;">{clean_line}</div>')
+
     return "".join(formatted_lines)
 
 
 def is_refusal_or_out_of_scope(text: str) -> bool:
-    """
-    BUG FIX 3: Detects when the RAG response is a safety refusal, out-of-scope query,
-    or reports no matching clinical evidence.
-    """
+    """Detects safety refusals or out-of-scope responses."""
     low = text.lower()
     refusal_triggers = [
         "i don't have enough clinical evidence",
         "do not have enough clinical evidence",
+        "do not have verified clinical guidelines",
         "not enough clinical evidence",
         "outside the scope",
         "outside available guidelines",
@@ -978,24 +1078,38 @@ def is_refusal_or_out_of_scope(text: str) -> bool:
         "no relevant clinical guidelines",
         "unable to prescribe",
         "antibiotics are not indicated for migraine",
-        "consult a physician for",
         "i cannot fulfill this request"
     ]
     if any(trigger in low for trigger in refusal_triggers):
-        # If it is strictly a refusal/no-evidence response (short or starts with refusal)
         if len(low) < 420 or low.startswith(("i don't", "i do not", "sorry", "i cannot", "based on the provided")):
             return True
     return False
 
 
+def clean_section_prefix(text: str) -> str:
+    """Removes leading section labels and stray asterisks like '**Recommended Actions:**'."""
+    cleaned = re.sub(
+        r'^[\s\*#\-•]*'
+        r'(?:recommended(?:\s+actions?)?|recommendations?|management|first-line\s+treatment|'
+        r'what\s+to\s+avoid|strictly\s+avoid|avoid|contraindications?|'
+        r'(?:emergency\s+)?warning\s+signs?(?:\s+to\s+monitor)?|signs?\s+to\s+monitor|symptoms?\s+to\s+monitor|'
+        r'when\s+to\s+hospitalize|hospitalization(?:\s+criteria)?|seek\s+emergency\s+care(?:\s+when)?|emergency\s+care)'
+        r'[\s\*]*[:\-—]?\s*[\*]*\s*',
+        '',
+        text.strip(),
+        flags=re.IGNORECASE
+    )
+    return cleaned.strip("* ").strip()
+
+
 def format_clinical_answer(raw_answer: str) -> str:
     """
-    BUG FIX 3 & 4:
-    - If out-of-scope or refusal: shows "Outside Available Guidelines" neutral callout
-      without any "Recommended" or green styling.
-    - Otherwise: only shows "Recommended", "Avoid", or "Seek Emergency Care When"
-      sections if the answer actually contains that content.
-    - Shows the muted disclaimer card once at the bottom of the answer.
+    FIX 1, 2 & 3:
+    - Strips stray "**" and inline citations.
+    - Renders ONLY "Avoid" in the red callout.
+    - Renders "Signs to Monitor" in a neutral dark card.
+    - Renders "When to Hospitalize" in a neutral dark card with an amber left border.
+    - Places the source chip on its own line below the answer with no brackets.
     """
     if not raw_answer:
         return ""
@@ -1009,13 +1123,11 @@ def format_clinical_answer(raw_answer: str) -> str:
             f'</div>'
         )
 
-    cleaned_answer = strip_duplicate_disclaimers(raw_answer)
-    if not cleaned_answer:
-        cleaned_answer = raw_answer.strip()
+    no_disclaimer = strip_duplicate_disclaimers(raw_answer)
+    cleaned_answer, extracted_sources = extract_and_strip_citations(no_disclaimer or raw_answer)
 
     html_parts = ['<div class="clinical-answer">']
 
-    # Check if this is an out-of-scope / no-evidence / guardrail refusal response
     if is_refusal_or_out_of_scope(cleaned_answer):
         html_parts.append(
             f'<div class="out-of-scope-callout">'
@@ -1032,65 +1144,79 @@ def format_clinical_answer(raw_answer: str) -> str:
         paragraphs = [p.strip() for p in re.split(r'\n+', cleaned_answer) if p.strip()]
         recommended_items = []
         avoid_items = []
-        emergency_items = []
+        monitor_items = []
+        hospitalize_items = []
 
         current_bucket = "recommended"
 
         for para in paragraphs:
-            lower_p = para.lower().lstrip("-•*# ")
+            # Strip markdown symbols for header detection
+            plain_p = re.sub(r'^[\s\*#\-•🚨]+', '', para).strip()
+            lower_p = plain_p.lower()
 
-            if re.match(r'^(avoid|contraindication|do not|warning|what to avoid|caution)', lower_p):
+            # Check explicit section headers
+            if re.match(r'^(avoid|what to avoid|strictly avoid|contraindication|do not take)', lower_p):
                 current_bucket = "avoid"
-                cleaned_p = re.sub(
-                    r'^(?:\*\*|##)?\s*(?:avoid|what to avoid|contraindications?|warnings?)\s*(?:\*\*)?[:\-—]?\s*',
-                    '', para, flags=re.I
-                )
-                if cleaned_p.strip():
-                    avoid_items.append(cleaned_p.strip())
+                rem = clean_section_prefix(para)
+                if rem:
+                    avoid_items.append(rem)
                 continue
-            elif re.match(r'^(seek emergency|emergency|when to seek|red flag|warning sign|immediate medical)', lower_p):
-                current_bucket = "emergency"
-                cleaned_p = re.sub(
-                    r'^(?:\*\*|##)?\s*(?:seek emergency care when|emergency warning signs?|when to seek care|warning signs?)\s*(?:\*\*)?[:\-—]?\s*',
-                    '', para, flags=re.I
-                )
-                if cleaned_p.strip():
-                    emergency_items.append(cleaned_p.strip())
+            elif re.match(r'^(when to hospitalize|hospitalize|hospitalization|seek emergency|emergency care|immediate hospital)', lower_p):
+                current_bucket = "hospitalize"
+                rem = clean_section_prefix(para)
+                if rem:
+                    hospitalize_items.append(rem)
+                continue
+            elif re.match(r'^(signs to monitor|warning signs|emergency warning signs|symptoms to monitor|red flags)', lower_p):
+                current_bucket = "monitor"
+                rem = clean_section_prefix(para)
+                if rem:
+                    monitor_items.append(rem)
                 continue
             elif re.match(r'^(recommended|recommendation|management|treatment|first-line|clinical guidance)', lower_p):
                 current_bucket = "recommended"
-                cleaned_p = re.sub(
-                    r'^(?:\*\*|##)?\s*(?:recommended|recommendations?|clinical guidance|management)\s*(?:\*\*)?[:\-—]?\s*',
-                    '', para, flags=re.I
-                )
-                if cleaned_p.strip():
-                    recommended_items.append(cleaned_p.strip())
+                rem = clean_section_prefix(para)
+                if rem:
+                    recommended_items.append(rem)
                 continue
 
+            # Sentence-level classification if the response is a single dense paragraph
             sentences = re.split(r'(?<=[.!?])\s+', para)
             if len(paragraphs) <= 2 and len(sentences) > 1:
                 for sent in sentences:
                     s_low = sent.lower()
-                    if any(k in s_low for k in ["avoid", "do not take", "contraindicated", "never use", "nsaid", "ibuprofen", "aspirin"]):
-                        avoid_items.append(sent)
-                    elif any(k in s_low for k in ["emergency", "immediately", "warning sign", "hospital", "severe", "bleeding", "urgent"]):
-                        emergency_items.append(sent)
+                    s_clean = clean_section_prefix(sent)
+                    if not s_clean:
+                        continue
+                    if any(k in s_low for k in ["avoid", "do not take", "contraindicated", "never use", "nsaid", "ibuprofen", "aspirin", "do not give"]):
+                        avoid_items.append(s_clean)
+                    elif any(k in s_low for k in ["hospitalize", "hospital", "emergency care", "call emergency", "unconscious", "platelets drop", "hematocrit", ">180/120"]):
+                        hospitalize_items.append(s_clean)
+                    elif any(k in s_low for k in ["warning sign", "monitor", "abdominal pain", "persistent vomiting", "bleeding gums", "shakiness", "sweating"]):
+                        monitor_items.append(s_clean)
                     else:
-                        recommended_items.append(sent)
+                        recommended_items.append(s_clean)
             else:
+                p_clean = clean_section_prefix(para)
+                if not p_clean:
+                    continue
                 if current_bucket == "avoid":
-                    avoid_items.append(para)
-                elif current_bucket == "emergency":
-                    emergency_items.append(para)
+                    avoid_items.append(p_clean)
+                elif current_bucket == "hospitalize":
+                    hospitalize_items.append(p_clean)
+                elif current_bucket == "monitor":
+                    monitor_items.append(p_clean)
                 else:
-                    if any(k in lower_p for k in ["avoid", "do not take", "contraindicated", "ibuprofen", "aspirin"]):
-                        avoid_items.append(para)
-                    elif any(k in lower_p for k in ["emergency", "warning sign", "immediately", "hospital"]):
-                        emergency_items.append(para)
+                    if any(k in lower_p for k in ["strictly avoid", "do not take", "contraindicated", "ibuprofen", "aspirin"]):
+                        avoid_items.append(p_clean)
+                    elif any(k in lower_p for k in ["hospitalize", "immediate hospital", "seek emergency", "call emergency"]):
+                        hospitalize_items.append(p_clean)
+                    elif any(k in lower_p for k in ["warning sign", "signs to monitor", "persistent vomiting", "bleeding gums"]):
+                        monitor_items.append(p_clean)
                     else:
-                        recommended_items.append(para)
+                        recommended_items.append(p_clean)
 
-        # Only render sections that actually contain content
+        # 1. Recommended Section
         if recommended_items:
             html_parts.append(
                 f'<div class="clinical-section">'
@@ -1101,6 +1227,7 @@ def format_clinical_answer(raw_answer: str) -> str:
                 f'</div>'
             )
 
+        # 2. Avoid Section (ONLY section using the Red Callout)
         if avoid_items:
             html_parts.append(
                 f'<div class="avoid-callout">'
@@ -1111,15 +1238,35 @@ def format_clinical_answer(raw_answer: str) -> str:
                 f'</div>'
             )
 
-        if emergency_items:
+        # 3. Signs to Monitor (Neutral Dark Card)
+        if monitor_items:
             html_parts.append(
-                f'<div class="clinical-section">'
-                f'  <div class="clinical-section-header">'
-                f'    <span class="ms-icon">emergency_home</span>Seek Emergency Care When'
+                f'<div class="neutral-clinical-card">'
+                f'  <div class="neutral-card-title">'
+                f'    <span class="ms-icon">visibility</span>Signs to Monitor'
                 f'  </div>'
-                f'  <div class="clinical-section-body">{format_inline_markdown(chr(10).join(emergency_items))}</div>'
+                f'  <div class="card-body-text">{format_inline_markdown(chr(10).join(monitor_items))}</div>'
                 f'</div>'
             )
+
+        # 4. When to Hospitalize (Neutral Dark Card with Amber Left Border)
+        if hospitalize_items:
+            html_parts.append(
+                f'<div class="amber-clinical-card">'
+                f'  <div class="amber-card-title">'
+                f'    <span class="ms-icon">local_hospital</span>When to Hospitalize'
+                f'  </div>'
+                f'  <div class="card-body-text">{format_inline_markdown(chr(10).join(hospitalize_items))}</div>'
+                f'</div>'
+            )
+
+    # FIX 3: Place source chips on their own line below the answer (no brackets)
+    if extracted_sources:
+        chips_html = "".join(
+            f'<span class="source-chip"><span class="ms-icon">verified</span>{html.escape(src)}</span>'
+            for src in extracted_sources
+        )
+        html_parts.append(f'<div class="source-chip-row">{chips_html}</div>')
 
     # Single muted disclaimer inside answer card
     html_parts.append(
@@ -1135,51 +1282,95 @@ def format_clinical_answer(raw_answer: str) -> str:
 
 def render_evidence_cards(raw_sources: str) -> str:
     """
-    Renders retrieved chunks as dark cards with source title, page badge,
-    relevance percentage bar, and cleaned snippet text.
+    FIX 4:
+    - Hides chunks below 50% relevance score.
+    - Removes "Cosine Distance:" and duplicated "Source:" lines.
+    - Parses chunks into clean Condition, Question, and Answer fields.
     """
     if not raw_sources or not str(raw_sources).strip():
         return ""
 
     text = str(raw_sources).strip()
-    chunks = [c.strip() for c in re.split(r'\n\s*\n|\n(?=\[\d+\]|\d+\.\s|Source:|Document:|---)', text) if c.strip()]
+    chunks = [c.strip() for c in re.split(r'\n\s*\n|\n(?=Source:)', text) if c.strip()]
     if not chunks:
         chunks = [text]
 
     cards_html = []
     for idx, chunk in enumerate(chunks, 1):
-        src_match = re.search(r'(?:Source|Document|Title|Category)\s*[:=\-|]\s*([^\n|\]]+)', chunk, re.I)
+        # 1. Extract source header
+        src_match = re.search(r'^Source:\s*([^\n]+)', chunk, re.I | re.M)
         if src_match:
             source_name = src_match.group(1).strip()
         else:
-            source_name = f"WHO / NIH Clinical Guideline Reference #{idx}"
+            source_name = f"WHO / NIH Clinical Guideline #{idx}"
 
-        # Strip raw MED-XXX IDs from the card header title
         source_name = re.sub(r'\bMED-\d+\b\s*[\|\-:]?\s*', '', source_name, flags=re.I).strip() or "WHO / NIH Guidelines"
 
+        # 2. Extract page label if present
         page_match = re.search(r'(?:page|p\.?)\s*[:=]?\s*(\d+)', chunk, re.I)
-        page_label = f"Page {page_match.group(1)}" if page_match else "Guideline Excerpt"
+        page_label = f"Page {page_match.group(1)}" if page_match else "Verified Guideline"
 
-        score_pct = max(74, 96 - (idx - 1) * 6)
-        dist_match = re.search(r'(?:distance|cosine)\s*[:=]\s*([0-9.]+)', chunk, re.I)
-        score_match = re.search(r'(?:score|relevance|similarity)\s*[:=]\s*([0-9.]+)', chunk, re.I)
-
+        # 3. Compute relevance percentage from Cosine Distance (hide if < 50%)
+        score_pct = max(74, 95 - (idx - 1) * 7)
+        dist_match = re.search(r'Cosine Distance\s*[:=]\s*([0-9.]+)', chunk, re.I)
         if dist_match:
             try:
                 dist_val = float(dist_match.group(1))
-                score_pct = int(max(15, min(99, round((1.0 - min(dist_val, 1.0)) * 100))))
-            except ValueError:
-                pass
-        elif score_match:
-            try:
-                sc_val = float(score_match.group(1))
-                score_pct = int(sc_val * 100) if sc_val <= 1.0 else int(min(99, sc_val))
+                # Cosine distance in Chroma (0 = exact match, 1 = orthogonal)
+                score_pct = int(round((1.0 - min(dist_val, 1.0)) * 100))
             except ValueError:
                 pass
 
-        # Clean raw MED-XXX IDs inside snippet text
-        cleaned_chunk = re.sub(r'\bMED-\d+\b\s*[\|\-:]?\s*', '', chunk)
-        clean_snippet = html.escape(cleaned_chunk.strip())
+        if score_pct < 50:
+            continue
+
+        # 4. Strip "Source: ..." and "Cosine Distance: ..." lines from body
+        body_lines = []
+        for line in chunk.split("\n"):
+            if re.match(r'^\s*(?:Source|Cosine Distance|Distance|Score)\s*:', line, re.I):
+                continue
+            body_lines.append(line.strip())
+        clean_body = " ".join(body_lines).strip()
+        clean_body = re.sub(r'\bMED-\d+\b\s*[\|\-:]?\s*', '', clean_body).strip()
+
+        # 5. Parse "CONDITION: ... | Q: ... | A: ..." into clean fields
+        cond_match = re.search(r'CONDITION:\s*([^|]+)', clean_body, re.I)
+        q_match = re.search(r'\|\s*Q:\s*([^|]+)', clean_body, re.I)
+        a_match = re.search(r'\|\s*A:\s*(.+)$', clean_body, re.I)
+
+        if cond_match or q_match or a_match:
+            fields_html = '<div class="evidence-field-grid">'
+            if cond_match:
+                fields_html += (
+                    f'<div class="evidence-field-row">'
+                    f'<span class="evidence-field-label">Condition:</span>'
+                    f'{html.escape(cond_match.group(1).strip())}'
+                    f'</div>'
+                )
+            if q_match:
+                fields_html += (
+                    f'<div class="evidence-field-row">'
+                    f'<span class="evidence-field-label">Question:</span>'
+                    f'{html.escape(q_match.group(1).strip())}'
+                    f'</div>'
+                )
+            if a_match:
+                fields_html += (
+                    f'<div class="evidence-field-row">'
+                    f'<span class="evidence-field-label">Answer:</span>'
+                    f'{html.escape(a_match.group(1).strip())}'
+                    f'</div>'
+                )
+            fields_html += '</div>'
+        else:
+            fields_html = (
+                f'<div class="evidence-field-grid">'
+                f'  <div class="evidence-field-row">'
+                f'    <span class="evidence-field-label">Guideline Excerpt:</span>'
+                f'    {html.escape(clean_body)}'
+                f'  </div>'
+                f'</div>'
+            )
 
         cards_html.append(
             f'<div class="evidence-card">'
@@ -1197,8 +1388,15 @@ def render_evidence_cards(raw_sources: str) -> str:
             f'      </div>'
             f'    </div>'
             f'  </div>'
-            f'  <div class="evidence-snippet">{clean_snippet}</div>'
+            f'  {fields_html}'
             f'</div>'
+        )
+
+    if not cards_html:
+        return (
+            '<div style="font-size:0.84rem; color:#9CA3AF; padding:8px 4px;">'
+            'No clinical chunks met the 50% relevance threshold for this query.'
+            '</div>'
         )
 
     return "".join(cards_html)
@@ -1230,7 +1428,6 @@ with st.sidebar:
         unsafe_allow_html=True
     )
 
-    # CARD 1: Specialty Filter
     with st.container(border=True):
         st.markdown(
             """
@@ -1254,7 +1451,6 @@ with st.sidebar:
             label_visibility="collapsed"
         )
 
-    # CARD 2: Upload Documents
     with st.container(border=True):
         st.markdown(
             """
@@ -1299,7 +1495,6 @@ with st.sidebar:
                     unsafe_allow_html=True
                 )
 
-    # CARD 3: Session
     with st.container(border=True):
         st.markdown(
             """
@@ -1339,7 +1534,7 @@ with st.sidebar:
             st.rerun()
 
 # ==============================================================================
-# 6. HEADER BANNER (TEAL GRADIENT + ACTIVE SCOPE PILL WITHOUT BRACKETS)
+# 6. HEADER BANNER
 # ==============================================================================
 clean_scope = str(selected_specialty).strip("[]")
 st.markdown(
@@ -1364,7 +1559,7 @@ st.markdown(
 )
 
 # ==============================================================================
-# 7. QUICK TEST CARDS (3 EQUAL CARDS, 2 LINES, NO TRUNCATION, TEAL GLOW)
+# 7. QUICK TEST CARDS (TITLE ON LINE 1, DESCRIPTION ON LINE 2, EQUAL HEIGHT)
 # ==============================================================================
 st.markdown(
     '<div class="section-label"><span class="ms-icon">science</span>Quick Clinical Evaluations</div>',
@@ -1376,7 +1571,7 @@ sample_query = None
 
 with col1:
     if st.button(
-        "**Dengue Painkillers & Warnings**\nCheck NSAID risks and warning signs.",
+        "**Dengue Painkillers & Warnings**  \nNSAID contraindications & warning signs",
         key="q_dengue",
         type="secondary",
         use_container_width=True
@@ -1385,7 +1580,7 @@ with col1:
 
 with col2:
     if st.button(
-        "**Diabetes HbA1c Thresholds**\nReview fasting glucose & HbA1c cutoffs.",
+        "**Diabetes HbA1c Thresholds**  \nFasting glucose & HbA1c diagnostic cutoffs",
         key="q_diabetes",
         type="secondary",
         use_container_width=True
@@ -1394,7 +1589,7 @@ with col2:
 
 with col3:
     if st.button(
-        "**Safety Guardrail Check**\nTest refusal for unindicated antibiotics.",
+        "**Safety Guardrail Check**  \nRefusal protocol for unindicated antibiotics",
         key="q_guardrail",
         type="secondary",
         use_container_width=True
@@ -1467,7 +1662,12 @@ if user_query:
         )
 
         try:
-            answer, retrieved_sources = ask_med_langchain(user_query, selected_specialty)
+            history = st.session_state.messages[:-1]
+            answer, retrieved_sources = ask_med_langchain(
+                user_query,
+                selected_specialty,
+                chat_history=history
+            )
         except Exception as e:
             answer = f"Backend Error: {str(e)}"
             retrieved_sources = None
